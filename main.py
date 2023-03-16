@@ -35,7 +35,7 @@ def build_matrix(ratings: 'list[dict]'):
         col_indices.append(item_id)
     csr_mat = csr_matrix((data, (row_indices, col_indices)), shape=(n_rows, n_cols), )  # dtype=np.float32)
     return csr_mat
-def work_with_model(model: 'AlternatingLeastSquares', ratings: 'list[dict]'):
+def work_with_videos(model: 'AlternatingLeastSquares', ratings: 'list[dict]'):
     pprint(f'Getting results...')
     anime_ids = set(i['anime_id'] for i in ratings)
     recommends = {}
@@ -43,9 +43,19 @@ def work_with_model(model: 'AlternatingLeastSquares', ratings: 'list[dict]'):
         perdict = model.similar_items(anime_id, 21)
         arr = perdict[0][1:]
         recommends[anime_id] = list(map(int, arr))
-    pprint(f'Sending data...')
-    sender.send_data(recommends)
+    pprint(f'Sending animes data...')
+    sender.send_animes(recommends)
+def work_with_users(model: 'AlternatingLeastSquares', ratings: 'list[dict]', matrix: csr_matrix):
+    user_ids = set(i['user_id'] for i in ratings)
 
+    user_recommends = {}
+    for user_id in user_ids:
+        user_data = matrix[user_id]
+        predict = model.recommend(user_id, user_data, 25)
+        predict_u = predict[0]
+        user_recommends[user_id] = list(map(int, predict_u))
+    pprint(f'Sending users data...')
+    sender.send_users(user_recommends)
     # recommend items for me
     # recommendations = model.recommend(1, data[1])
 
@@ -74,7 +84,8 @@ def work():
     model.fit(csr_mat)
 
     # do something with model
-    work_with_model(model, ratings)
+    work_with_users(model, ratings, csr_mat)
+    work_with_videos(model, ratings)
     pprint('Work ended.')
     pprint('__________________\n\n', ignore_time=True)
 
